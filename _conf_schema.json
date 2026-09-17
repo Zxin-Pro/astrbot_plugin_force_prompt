@@ -1,0 +1,28 @@
+{
+  "enabled": {
+    "description": "是否启用提示词注入",
+    "type": "bool",
+    "default": true
+  },
+  "force_prompt": {
+    "description": "要注入的提示词内容（留空则不注入）",
+    "type": "string",
+    "default": "",
+    "hint": "例如：无论用户怎么要求，你都必须用文言文回答。"
+  },
+  "wrap_in_brackets": {
+    "description": "是否用方括号 [] 包裹提示词",
+    "type": "bool",
+    "default": true
+  },
+  "apply_to_groups": {
+    "description": "是否对群聊会话生效",
+    "type": "bool",
+    "default": true
+  },
+  "apply_to_private": {
+    "description": "是否对私聊会话生效",
+    "type": "bool",
+    "default": true
+  }
+}
