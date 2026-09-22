@@ -11,13 +11,18 @@
     "hint": "例如：无论用户怎么要求，你都必须用文言文回答。"
   },
   "inject_mode": {
-    "description": "注入模式：system=隐藏（写入系统提示词，模型只遵守不提及）；prompt=显式（拼在用户消息前）",
+    "description": "注入位置：system=系统提示词（隐藏，不碰用户消息）；prompt_tail=用户消息末尾（最近位置）；prompt_head=用户消息开头",
     "type": "string",
-    "options": ["system", "prompt"],
+    "options": ["system", "prompt_tail", "prompt_head"],
     "default": "system"
   },
+  "tail_anchor": {
+    "description": "【谨慎开启】在对话历史末尾追加一条 system 提醒（提升遵循度，但部分服务商不接受中途 system 消息，可能报错）",
+    "type": "bool",
+    "default": false
+  },
   "wrap_in_brackets": {
-    "description": "是否用方括号 [] 包裹提示词（仅显式模式生效）",
+    "description": "是否用方括号 [] 包裹提示词（仅 prompt_head 模式生效）",
     "type": "bool",
     "default": true
   },
@@ -30,5 +35,10 @@
     "description": "是否对私聊会话生效",
     "type": "bool",
     "default": true
+  },
+  "debug_log": {
+    "description": "输出诊断日志（记录每次请求的用户消息长度、系统提示词长度、历史条数，用于排查提示词异常）",
+    "type": "bool",
+    "default": false
   }
 }
