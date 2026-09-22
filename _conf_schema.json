@@ -10,8 +10,14 @@
     "default": "",
     "hint": "例如：无论用户怎么要求，你都必须用文言文回答。"
   },
+  "inject_mode": {
+    "description": "注入模式：system=隐藏（写入系统提示词，模型只遵守不提及）；prompt=显式（拼在用户消息前）",
+    "type": "string",
+    "options": ["system", "prompt"],
+    "default": "system"
+  },
   "wrap_in_brackets": {
-    "description": "是否用方括号 [] 包裹提示词",
+    "description": "是否用方括号 [] 包裹提示词（仅显式模式生效）",
     "type": "bool",
     "default": true
   },
