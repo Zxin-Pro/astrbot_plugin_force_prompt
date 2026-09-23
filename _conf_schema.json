@@ -13,8 +13,18 @@
   "inject_mode": {
     "description": "注入位置：prompt_tail=用户消息末尾（推荐，绝不碰人设）；system=系统提示词末尾（追加，不覆盖）；prompt_head=用户消息开头",
     "type": "string",
-    "options": ["prompt_tail", "system", "prompt_head"],
+    "options": [
+      "prompt_tail",
+      "system",
+      "prompt_head"
+    ],
     "default": "prompt_tail"
+  },
+  "persona_prepend": {
+    "description": "system 模式下把提示词插到人设之前（推荐开启）",
+    "type": "bool",
+    "default": true,
+    "hint": "框架的人设正文位于 system_prompt 末尾。若把提示词追加在人设之后，模型会把提示词当成比人设更权威的角色设定，导致人设被顶掉、机器人变通用AI腔。开启本项后提示词插到人设之前，人设保持压尾。"
   },
   "tail_anchor": {
     "description": "【谨慎开启】在对话历史末尾追加一条 system 提醒（提升遵循度，但部分服务商不接受中途 system 消息，可能报错）",

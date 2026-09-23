@@ -55,7 +55,7 @@ def _user_tail_reminder(content: str) -> str:
     "astrbot_plugin_force_prompt",
     "Zxin-Pro",
     "强制在每个会话的 LLM 请求注入预设提示词",
-    "v1.0.4",
+    "v1.0.5",
 )
 class ForcePromptPlugin(Star):
     """
@@ -75,6 +75,13 @@ class ForcePromptPlugin(Star):
     3. 失败静默：任何异常只记日志，不阻断 LLM 请求；
     4. 支持 debug_log 输出注入前后的长度对比，方便排查。
 
+    v1.0.5 修复（重要）：
+    - system 模式下把提示词插到「# Persona Instructions」**之前**（persona_prepend，默认开启）。
+      框架把人格正文追加在 system_prompt 末尾，v1.0.3 的追加方式会让提示词变成
+      最后、权重最高的一段，模型据此把提示词当成"最权威的角色设定"，
+      而提示词里通常没有人物设定 → 人设被顶掉、机器人变成通用AI腔（裸奔）。
+      前置注入后人设保持压尾，角色身份始终有效。
+
     v1.0.4 修复：
     - 弃用 id(req) 幂等（长跑下 id 复用会误判"已注入"而静默跳过），
       改为内容标记 + MD5 请求指纹双判；
@@ -87,13 +94,38 @@ class ForcePromptPlugin(Star):
     # 防重复集合的最大容量上限，超出后清理最旧记录，防止长期运行内存泄漏
     MAX_INJECTED_SET_SIZE = 512
 
+    # 人设段落的分界标记：框架用 "# Persona Instructions" 引出人设正文
+    _PERSONA_ANCHOR = "# Persona Instructions"
+
+    def _split_persona(self, system_prompt: str):
+        """
+        把 system_prompt 拆成 (人设之前的前缀, 人设正文)。
+
+        框架的拼接结构是：
+            <若干系统段落>
+            # Persona Instructions
+
+            <人格提示词正文>
+
+        人设正文位于最后，是模型眼里的"角色身份"。破甲词若追加在它后面，
+        就会被当成比人设更权威的指令 —— 这正是"人设失效、机器人裸奔"的成因。
+
+        因此需要把破甲词插到人设**之前**，让 persona 保持压尾（权重最高）。
+        """
+        if not system_prompt:
+            return "", ""
+        idx = system_prompt.find(self._PERSONA_ANCHOR)
+        if idx < 0:
+            return "", system_prompt
+        return system_prompt[:idx], system_prompt[idx:]
+
     def __init__(self, context: Context, config: Any = None):
         super().__init__(context)
         # config 由 AstrBot 加载器自动注入（来自 _conf_schema.json）
         self.config = config
         # 请求指纹集合（替代 v1.0.3 的 id(req)）
         self._injected_ids: Set[int] = set()
-        logger.info("astrbot_plugin_force_prompt v1.0.4 已加载")
+        logger.info("astrbot_plugin_force_prompt v1.0.5 已加载")
 
     async def terminate(self):
         """插件卸载/停用时清理资源"""
@@ -225,13 +257,35 @@ class ForcePromptPlugin(Star):
                     target = "用户消息尾部(降级)"
                 else:
                     before_len = len(current_system)
-                    # 只追加：原有系统提示词（人设等）完整保留
-                    req.system_prompt = (
-                        f"{current_system.rstrip()}\n\n{stealth_text}"
-                        if current_system.strip()
-                        else stealth_text
-                    )
-                    target = f"系统提示词({before_len}->{len(req.system_prompt)})"
+                    prefer_prepend = bool(conf.get("persona_prepend", True))
+                    head, persona_part = self._split_persona(current_system)
+
+                    if prefer_prepend and persona_part:
+                        # 关键：破甲词插到人设**之前**，persona 保持压尾。
+                        # 若追加在人设之后，破甲词会变成模型眼里最权威的"角色设定"，
+                        # 人设被它顶掉 —— 表现就是"人设失效、机器人裸奔"。
+                        req.system_prompt = (
+                            f"{head.rstrip()}\n\n{stealth_text}\n\n{persona_part}"
+                            if head.strip()
+                            else f"{stealth_text}\n\n{persona_part}"
+                        )
+                        target = f"系统提示词(人设前,{before_len}->{len(req.system_prompt)})"
+                    elif prefer_prepend:
+                        # 未识别出人设段落：前置注入，同样优先于追加
+                        req.system_prompt = (
+                            f"{stealth_text}\n\n{current_system}"
+                            if current_system.strip()
+                            else stealth_text
+                        )
+                        target = f"系统提示词(前置,{before_len}->{len(req.system_prompt)})"
+                    else:
+                        # 兼容旧行为：追加到末尾
+                        req.system_prompt = (
+                            f"{current_system.rstrip()}\n\n{stealth_text}"
+                            if current_system.strip()
+                            else stealth_text
+                        )
+                        target = f"系统提示词(追加,{before_len}->{len(req.system_prompt)})"
 
                 # 可选尾部锚点：默认关闭。开启时也**不原地修改**历史对象，
                 # 而是用新列表替换 req.contexts，避免污染持久化会话历史。
