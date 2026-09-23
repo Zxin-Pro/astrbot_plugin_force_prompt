@@ -1,6 +1,6 @@
 name: astrbot_plugin_force_prompt
 display_name: 强制提示词注入
-desc: 强制在每个会话的 LLM 请求开头注入预设提示词，支持群聊/私聊分别开关与热更新配置
-version: v1.0.3
+desc: 强制在每个会话的 LLM 请求开头注入预设提示词，支持群聊/私聊分别开关与热更新配置（v1.0.4 修复幂等与语气压制）
+version: v1.0.4
 author: Zxin-Pro
 repo: https://github.com/Zxin-Pro/astrbot_plugin_force_prompt
